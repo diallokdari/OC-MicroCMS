@@ -1,45 +1,65 @@
 <?php
 
-use Symfony\Component\HttpFoundation\Request;
-use MicroCMS\Domain\Comment;
-use MicroCMS\Form\Type\CommentType;
-
 // Home page
-$app->get('/', function () use ($app) {
-    $articles = $app['dao.article']->findAll();
-    return $app['twig']->render('index.html.twig', array('articles' => $articles));
-})->bind('home');
+$app->get('/', "MicroCMS\Controller\HomeController::indexAction")
+->bind('home');
 
-// Article details with comments
-$app->match('/article/{id}', function ($id, Request $request) use ($app) {
-    $article = $app['dao.article']->find($id);
-    $commentFormView = null;
-    if ($app['security.authorization_checker']->isGranted('IS_AUTHENTICATED_FULLY')) {
-        // A user is fully authenticated : he can add comments
-        $comment = new Comment();
-        $comment->setArticle($article);
-        $user = $app['user'];
-        $comment->setAuthor($user);
-        $commentForm = $app['form.factory']->create(CommentType::class, $comment);
-        $commentForm->handleRequest($request);
-        if ($commentForm->isSubmitted() && $commentForm->isValid()) {
-            $app['dao.comment']->save($comment);
-            $app['session']->getFlashBag()->add('success', 'Your comment was successfully added.');
-        }
-        $commentFormView = $commentForm->createView();
-    }
-    $comments = $app['dao.comment']->findAllByArticle($id);
-
-    return $app['twig']->render('article.html.twig', array(
-        'article' => $article, 
-        'comments' => $comments,
-        'commentForm' => $commentFormView));
-})->bind('article');
+// Detailed info about an article
+$app->match('/article/{id}', "MicroCMS\Controller\HomeController::articleAction")
+->bind('article');
 
 // Login form
-$app->get('/login', function(Request $request) use ($app) {
-    return $app['twig']->render('login.html.twig', array(
-        'error'         => $app['security.last_error']($request),
-        'last_username' => $app['session']->get('_security.last_username'),
-    ));
-})->bind('login');
+$app->get('/login', "MicroCMS\Controller\HomeController::loginAction")
+->bind('login');
+
+// Admin zone
+$app->get('/admin', "MicroCMS\Controller\AdminController::indexAction")
+->bind('admin');
+
+// Add a new article
+$app->match('/admin/article/add', "MicroCMS\Controller\AdminController::addArticleAction")
+->bind('admin_article_add');
+
+// Edit an existing article
+$app->match('/admin/article/{id}/edit', "MicroCMS\Controller\AdminController::editArticleAction")
+->bind('admin_article_edit');
+
+// Remove an article
+$app->get('/admin/article/{id}/delete', "MicroCMS\Controller\AdminController::deleteArticleAction")
+->bind('admin_article_delete');
+
+// Edit an existing comment
+$app->match('/admin/comment/{id}/edit', "MicroCMS\Controller\AdminController::editCommentAction")
+->bind('admin_comment_edit');
+
+// Remove a comment
+$app->get('/admin/comment/{id}/delete', "MicroCMS\Controller\AdminController::deleteCommentAction")
+->bind('admin_comment_delete');
+
+// Add a user
+$app->match('/admin/user/add', "MicroCMS\Controller\AdminController::addUserAction")
+->bind('admin_user_add');
+
+// Edit an existing user
+$app->match('/admin/user/{id}/edit', "MicroCMS\Controller\AdminController::editUserAction")
+->bind('admin_user_edit');
+
+// Remove a user
+$app->get('/admin/user/{id}/delete', "MicroCMS\Controller\AdminController::deleteUserAction")
+->bind('admin_user_delete');
+
+// API : get all articles
+$app->get('/api/articles', "MicroCMS\Controller\ApiController::getArticlesAction")
+->bind('api_articles');
+
+// API : get an article
+$app->get('/api/article/{id}', "MicroCMS\Controller\ApiController::getArticleAction")
+->bind('api_article');
+
+// API : create an article
+$app->post('/api/article', "MicroCMS\Controller\ApiController::addArticleAction")
+->bind('api_article_add');
+
+// API : remove an article
+$app->delete('/api/article/{id}', "MicroCMS\Controller\ApiController::deleteArticleAction")
+->bind('api_article_delete');
